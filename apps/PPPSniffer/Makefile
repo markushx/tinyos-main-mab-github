@@ -44,6 +44,8 @@ CFLAGS += -DRADIO_DEBUG_PPP
 # also receive big blip packets....
 CFLAGS += -DTOSH_DATA_LENGTH=90
 
+CFLAGS += -DCC2420X_DEF_CHANNEL=26
+
 TOSMAKE_PATH += .
 CFLAGS += -I$(TOSDIR)/lib/diagmsg
 PFLAGS += -I$(TOSDIR)/lib/ppp
