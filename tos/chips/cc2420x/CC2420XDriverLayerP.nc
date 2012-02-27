@@ -1419,7 +1419,7 @@ implementation
 
 //for apps/PPPSniffer
 #ifdef RADIO_DEBUG_PPP
-	vent void Ipv6LcpAutomaton.transitionCompleted (LcpAutomatonState_e lcpstate) { }
+	event void Ipv6LcpAutomaton.transitionCompleted (LcpAutomatonState_e lcpstate) { }
 	event void Ipv6LcpAutomaton.thisLayerUp () { }
 	event void Ipv6LcpAutomaton.thisLayerDown () { }
 	event void Ipv6LcpAutomaton.thisLayerStarted () { }

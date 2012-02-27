@@ -120,9 +120,14 @@ implementation
 	/* Serial stack */
 	components PppDaemonC;
 	DriverLayerP.PppSplitControl -> PppDaemonC;
-	components PlatformSerialHdlcUartC;
-	PppDaemonC.HdlcUart -> PlatformSerialHdlcUartC;
-	PppDaemonC.UartControl -> PlatformSerialHdlcUartC;
+
+#if defined(PLATFORM_TELOSB) || defined(PLATFORM_EPIC)
+	components PlatformHdlcUartC as HdlcUartC;
+#else
+	components DefaultHdlcUartC as HdlcUartC;
+#endif
+	PppDaemonC.HdlcUart -> HdlcUartC;
+	PppDaemonC.UartControl -> HdlcUartC;
 
 	/* Link in RFC5072 support for both the control and network protocols */
 	components PppIpv6C;

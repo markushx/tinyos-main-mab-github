@@ -50,7 +50,8 @@ TOSMAKE_PATH += .
 CFLAGS += -I$(TOSDIR)/lib/diagmsg
 PFLAGS += -I$(TOSDIR)/lib/ppp
 PFLAGS += -I$(TOSDIR)/lib/fragpool
-#PFLAGS += -I$(TOSDIR)/lib/serialprintf
 
+# -Os breaks the PPP stack somehow...
+OPTFLAGS += -O2
 
 include $(MAKERULES)

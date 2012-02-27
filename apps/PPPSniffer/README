@@ -57,15 +57,11 @@
  Install the PPPSniffer:
 
  $ cd $TOS_ROOT/apps/PPPSniffer
- $ make telosb cc2420x install,1 bsl,/dev/ttyUSB0
-
-NOTE: The new compilers break the PPPSniffer, set the following:
-NOTE: export PATH=/opt/msp430-gcc-4.4.5/bin:$PATH
+ $ make telosb cc2420x_32khz install,1 bsl,/dev/ttyUSB0
 
  Connect PPP to the mote:
  $ sudo pppd debug passive noauth nodetach 115200 /dev/ttyUSB0 nocrtscts \
  nocdtrcts lcp-echo-interval 0 noccp noip ipv6 ::23,::24
-
 
  You should get the following output:
 
@@ -96,10 +92,6 @@ NOTE: export PATH=/opt/msp430-gcc-4.4.5/bin:$PATH
  sent [LCP ProtRej id=0x3 40 4f 0d 50 50 50 3a 20 6c 69 6e 6b 20 75 70 0a]
  Script /etc/ppp/ipv6-up finished (pid 7464), status = 0x0
  """
-
- # Really necessary???
- # Assign the ppp interface an IPv6 address
- # sudo ifconfig ppp0 add fec0::100/64
 
  #############################################
  # blip based applications
