@@ -4,17 +4,17 @@
  # Email: mab@comnets.uni-bremen.de          #
  #############################################
 
- The PPPSniffer application is similar to the well known
- IPBaseStation.
+ The PPPSniffer application is similar to blip's PppRouter.
 
- This application receives packets on a specified IEEE 802.15.4
+ This application receives/snoops packets on a specified IEEE 802.15.4
  channel and forwards the packets to the computer using the
  Point-to-Point Protocol.  The received packets can be visualized
  using Wireshark.
 
  Wireshark version 1.6 and higher should be able to dissect 802.15.4,
  6LoWPAN, RPL, CoAP. So the following bracketed description should not
- be necessary anymore.
+ be necessary anymore. It is left here for reference, since newer SVN
+ versions might have better dissectors for the non-RFC protocols.
 
  ((((
  OLD: Since the standard Wireshark does not contain the dissector for
@@ -124,9 +124,7 @@
  # Run Wireshark
  #############################################
 
- Start wireshark. (There should be a hint in the start up screen
- which says "Development Version")
-
+ Start wireshark:
  $ sudo wireshark
 
  To decode the received packets as 802.15.4 packets instead of IP
