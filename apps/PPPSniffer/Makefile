@@ -1,8 +1,5 @@
 COMPONENT=PPPSnifferC
 
-# radio options.  channel settings will be overridden by the driver
-# CFLAGS += -DCC2420_DEF_RFPOWER=4
-
 # this is necessary, otherwise we will allocate a heap by including
 # the lowpan target
 CFLAGS += -DNO_IP_MALLOC
@@ -12,33 +9,6 @@ CFLAGS += -DNO_IP_MALLOC
 # memmove.  This doesn't mean that motes running blip also need this--
 # they can use IFRAMES or IEEE154FRAMES
 #CFLAGS += -DIEEE154FRAMES_ENABLED
-
-# if you're worried about your interface mote crashing, enable this to
-# turn on a hardware watchdog that will reset it if it does.  CFLAGS
-# += -DBLIP_WATCHDOG
-#
-# debugging
-#
-
-# filter packets based on a specified topology
-# PFLAGS += -I../UDPEcho/NodeConnectivity -DSW_TOPOLOGY
-
-# part of the test harness
-# CFLAGS += -DDBG_TRACK_FLOWS
-
-# for simulation
-# CFLAGS += -DBASESTATION_ID=100
-
-# defs for snooping-- handy for debugging LPL, etc.
-#CFLAGS += -DCC2420_NO_UNIQUE
-#CFLAGS += -DCC2420_DEF_CHANNEL=15
-#CFLAGS += -DCC2420_NO_ACKNOWLEDGEMENTS
-#CFLAGS += -DCC2420_NO_ADDRESS_RECOGNITION
-
-#CFLAGS += -DDIAGMSG_RECORDED_MSGS=60
-#CFLAGS += -DRADIO_DEBUG
-#CFLAGS += -DRADIO_DEBUG_PARTNUM
-#CFLAGS += -DRADIO_DEBUG_MESSAGES
 
 CFLAGS += -DRADIO_DEBUG_PPP
 # also receive big blip packets....
@@ -51,7 +21,7 @@ CFLAGS += -I$(TOSDIR)/lib/diagmsg
 PFLAGS += -I$(TOSDIR)/lib/ppp
 PFLAGS += -I$(TOSDIR)/lib/fragpool
 
-# -Os breaks the PPP stack somehow...
+# -Os breaks the PPP or serial stack somehow...
 OPTFLAGS += -O2
 
 include $(MAKERULES)
