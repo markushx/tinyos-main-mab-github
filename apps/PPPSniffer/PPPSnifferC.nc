@@ -36,6 +36,8 @@
  * delivers them over ppp to the host computer. On the host wireshark
  * can pick the packets up on the ppp interface.
  *
+ * Restructured according to apps/tests/rfxlink/RadioSniffer
+ *
  * @author Markus Becker
  * @author Phil Buonadonna
  * @author Gilman Tolle
@@ -43,40 +45,79 @@
  * @author Philip Levis
  * @date January 3 2011
  */
-//#include "ppp.h"
-#include <Ieee154.h>
 
-configuration PPPSnifferC {
+configuration PPPSnifferC
+{
 }
+
 implementation {
 
-    /*
 #define UQ_METADATA_FLAGS       "UQ_METADATA_FLAGS"
 #define UQ_RADIO_ALARM          "UQ_RADIO_ALARM"
-    */
+
     components MainC, PPPSnifferP, LedsC;//, AssertC;
 
     PPPSnifferP.Boot -> MainC;
-    /*
-    PPPSnifferP.Leds -> LedsC;
-    */
-    //PPPSnifferP.SplitControl -> SerialActiveMessageC;
-    components ActiveMessageC as MessageC;
-    PPPSnifferP.MessageControl -> MessageC;
-    PPPSnifferP.Packet -> MessageC.Packet;
-    //PPPSnifferP.Receive -> MessageC.Receive;
+    PPPSnifferP.RadioState -> RadioDriverLayerC;
+    PPPSnifferP.RadioReceive -> RadioDriverLayerC;
 
-    /* Serial stack */
-    /*
+    // just to avoid a timer compilation bug
+    components new TimerMilliC();
+
+// -------- TimeStamping
+
+    components new TimeStampingLayerC();
+    TimeStampingLayerC.LocalTimeRadio -> RadioDriverLayerC;
+    TimeStampingLayerC.SubPacket -> MetadataFlagsLayerC;
+    TimeStampingLayerC.TimeStampFlag -> MetadataFlagsLayerC.PacketFlag[unique(UQ_METADATA_FLAGS)];
+
+// -------- MetadataFlags
+
+    components new MetadataFlagsLayerC();
+    MetadataFlagsLayerC.SubPacket -> RadioDriverLayerC;
+
+// -------- RadioAlarm
+
+    components new RadioAlarmC();
+    RadioAlarmC.Alarm -> RadioDriverLayerC;
+
+// -------- RadioDriver
+
+#if defined(PLATFORM_IRIS) || defined(PLATFORM_MULLE) || defined(PLATFORM_MESHBEAN)
+    components RF230DriverLayerC as RadioDriverLayerC;
+    components RF230RadioP as RadioP;
+#elif defined(PLATFORM_MESHBEAN900)
+    components RF212DriverLayerC as RadioDriverLayerC;
+    components RF212RadioP as RadioP;
+#elif defined(PLATFORM_MICAZ) || defined(PLATFORM_TELOSA) || defined(PLATFORM_TELOSB)
+    components CC2420XDriverLayerC as RadioDriverLayerC;
+    components CC2420XRadioP as RadioP;
+#elif defined(PLATFORM_UCMINI)
+    components RFA1DriverLayerC as RadioDriverLayerC;
+    components RFA1RadioP as RadioP;
+#endif
+
+    RadioDriverLayerC.PacketTimeStamp -> TimeStampingLayerC;
+    RadioDriverLayerC.Config -> RadioP;
+
+    RadioDriverLayerC.TransmitPowerFlag -> MetadataFlagsLayerC.PacketFlag[unique(UQ_METADATA_FLAGS)];
+    RadioDriverLayerC.RSSIFlag -> MetadataFlagsLayerC.PacketFlag[unique(UQ_METADATA_FLAGS)];
+    RadioDriverLayerC.TimeSyncFlag -> MetadataFlagsLayerC.PacketFlag[unique(UQ_METADATA_FLAGS)];
+    RadioDriverLayerC.RadioAlarm -> RadioAlarmC.RadioAlarm[unique(UQ_RADIO_ALARM)];
+
+    /* Serial/PPP stack */
     components PppDaemonC;
     PPPSnifferP.PppSplitControl -> PppDaemonC;
 
-    components PlatformSerialHdlcUartC;
-    PppDaemonC.HdlcUart -> PlatformSerialHdlcUartC;
-    PppDaemonC.UartControl -> PlatformSerialHdlcUartC;
-    */
+#if defined(PLATFORM_TELOSB) || defined(PLATFORM_EPIC)
+    components PlatformHdlcUartC as HdlcUartC;
+#else
+    components DefaultHdlcUartC as HdlcUartC;
+#endif
+    PppDaemonC.HdlcUart -> HdlcUartC;
+    PppDaemonC.UartControl -> HdlcUartC;
+
     /* Link in RFC5072 support for both the control and network protocols */
-    /*
     components PppIpv6C;
     PppDaemonC.PppProtocol[PppIpv6C.ControlProtocol] -> PppIpv6C.PppControlProtocol;
     PppDaemonC.PppProtocol[PppIpv6C.Protocol] -> PppIpv6C.PppProtocol;
@@ -84,11 +125,4 @@ implementation {
     PppIpv6C.LowerLcpAutomaton -> PppDaemonC;
     PPPSnifferP.Ipv6LcpAutomaton -> PppIpv6C;
     PPPSnifferP.PppIpv6 -> PppIpv6C;
-    */
-    /* Link in the custom protocol for printf support */
-    /*
-    components PppPrintfC;
-    PppPrintfC.Ppp -> PppDaemonC;
-    PppDaemonC.PppProtocol[PppPrintfC.Protocol] -> PppPrintfC;
-    */
 }

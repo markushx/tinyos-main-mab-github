@@ -83,35 +83,28 @@
  * serial/USB.
  */
 
-//#include "AM.h"
-//#include <stdio.h>
+#include <Tasklet.h>
 
 module PPPSnifferP {
   uses {
     interface Boot;
+
     interface Packet;
-    interface Receive;
+    interface RadioReceive;
+    interface RadioState;
 
-    //interface Receive as ActiveReceive;
-    //interface Receive as BareReceive;
-    //interface SplitControl as RadioSplitControl;
-    interface SplitControl as MessageControl;
-
-    /*
     interface SplitControl as PppSplitControl;
     interface LcpAutomaton as Ipv6LcpAutomaton;
     interface PppIpv6;
-    */
+
     //interface Leds;
   }
 }
 
 implementation
 {
-    //message_t msgbuffer;
-
-    /*  enum {
-    UART_QUEUE_LEN = 10,
+  enum {
+    PPP_QUEUE_LEN = 10,
   };
 
   uint16_t serial_read;
@@ -122,20 +115,11 @@ implementation
   bool echo_busy;
   message_t echo_buf;
 
-
-  message_t  uartQueueBufs[UART_QUEUE_LEN];
-  message_t  *uartQueue[UART_QUEUE_LEN];
-  uint8_t    uartIn, uartOut;
-  bool       uartBusy, uartFull;
+  message_t  pppQueueBufs[PPP_QUEUE_LEN];
+  message_t  *pppQueue[PPP_QUEUE_LEN];
+  uint8_t    pppIn, pppOut;
+  bool       pppBusy, pppFull;
   bool       ppp_link_up;
-
-  void dropBlink() {
-    call Leds.led2Toggle();
-  }
-
-  void failBlink() {
-    call Leds.led2Toggle();
-  }
 
   event void Ipv6LcpAutomaton.transitionCompleted (LcpAutomatonState_e state) { }
   event void Ipv6LcpAutomaton.thisLayerUp () { }
@@ -148,65 +132,44 @@ implementation
 
   event void PppIpv6.linkUp ()
   {
-    //call LinkDownLed.off();
-    //call LinkUpLed.on();
     ppp_link_up = TRUE;
-    printf("PPP: link up\n");
   }
 
   event void PppIpv6.linkDown ()
   {
     ppp_link_up = FALSE;
-      //call LinkUpLed.off();
-      //call LinkDownLed.on();
   }
 
   event error_t PppIpv6.receive (const uint8_t* message,
                                  unsigned int len)
   {
-      //call PacketRxLed.toggle();
-    printf("PPP RX: %u octets\n", len);
     return SUCCESS;
   }
-    */
-  event void MessageControl.startDone(error_t err) {
-    if (err == SUCCESS) {
-    } else {
-      call MessageControl.start();
-    }
-  }
-  event void MessageControl.stopDone(error_t err) {
-  }
+
   event void Boot.booted() {
-      call MessageControl.start();
-      /*    uint8_t i;
+    uint8_t i;
     error_t rc;
 
-    //CHECK_NODE_ID;
+    atomic {
+	for (i = 0; i < PPP_QUEUE_LEN; i++)
+	    pppQueue[i] = &pppQueueBufs[i];
+	pppIn = pppOut = 0;
+	pppBusy = FALSE;
+	pppFull = TRUE;
+	ppp_link_up = FALSE;
+    }
 
-    for (i = 0; i < UART_QUEUE_LEN; i++)
-      uartQueue[i] = &uartQueueBufs[i];
-    uartIn = uartOut = 0;
-    uartBusy = FALSE;
-    uartFull = TRUE;
-    ppp_link_up = FALSE;
-
-    echo_busy = FALSE;
-    serial_read = 0;
-    radio_read = 0;
-    serial_fail = 0;
-    radio_fail = 0;
-
-    call RadioSplitControl.start();
     rc = call Ipv6LcpAutomaton.open();
     rc = call PppSplitControl.start();
-      */
+    call RadioState.turnOn();
   }
+
+  tasklet_async event void RadioState.done() {}
 
   /*
   event void RadioSplitControl.startDone(error_t error) {}
   event void RadioSplitControl.stopDone(error_t error) {}
-  
+
   message_t* receive(message_t* msg, void* payload, uint8_t len);
   */
   // Set TI CC24xx FCS format in Wireshark:
@@ -258,7 +221,55 @@ implementation
   }
   */
 
-  event message_t *Receive.receive(message_t *msg, void *msg_payload, uint8_t len) {
-      return msg;
+  task void ppptransmit() {
+      message_t* msg;
+
+      atomic {
+	  if (pppIn == pppOut && !pppFull) {
+	      pppBusy = FALSE;
+	      return;
+	  }
+
+	  msg = pppQueue[pppOut];
+      }
+
+      if (call PppIpv6.transmit((uint8_t*)msg+1, //skip length ??
+				((uint8_t*)(msg))[0] //len??
+				) == SUCCESS) {
+	  atomic {
+	      if (msg == pppQueue[pppOut]) {
+		  if (++pppOut >= PPP_QUEUE_LEN)
+		      pppOut = 0;
+		  if (pppFull)
+		      pppFull = FALSE;
+	      }
+	  }
+	  post ppptransmit();
+      } else {
+	  post ppptransmit();
+      }
+  }
+
+  tasklet_async event bool RadioReceive.header(message_t* msg) {
+    return SUCCESS;
+  }
+
+  tasklet_async event message_t* RadioReceive.receive(message_t* msg) {
+      atomic {
+	  if (!pppFull) {
+	      pppQueue[pppIn] = msg;
+
+	      pppIn = (pppIn + 1) % PPP_QUEUE_LEN;
+
+	      if (pppIn == pppOut)
+		  pppFull = TRUE;
+
+	      if (!pppBusy) {
+		  post ppptransmit();
+		  pppBusy = TRUE;
+	      }
+	  }
+      }
+    return msg;
   }
 }
