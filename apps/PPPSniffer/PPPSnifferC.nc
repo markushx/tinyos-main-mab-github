@@ -61,6 +61,8 @@ implementation {
     PPPSnifferP.RadioState -> RadioDriverLayerC;
     PPPSnifferP.RadioReceive -> RadioDriverLayerC;
 
+    PPPSnifferP.Leds -> LedsC;
+
     // just to avoid a timer compilation bug
     components new TimerMilliC();
 

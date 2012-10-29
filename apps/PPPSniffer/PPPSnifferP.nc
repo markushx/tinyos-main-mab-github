@@ -97,7 +97,7 @@ module PPPSnifferP {
     interface LcpAutomaton as Ipv6LcpAutomaton;
     interface PppIpv6;
 
-    //interface Leds;
+    interface Leds;
   }
 }
 
@@ -132,12 +132,16 @@ implementation
 
   event void PppIpv6.linkUp ()
   {
-    ppp_link_up = TRUE;
+      atomic {
+	  ppp_link_up = TRUE;
+      }
   }
 
   event void PppIpv6.linkDown ()
   {
-    ppp_link_up = FALSE;
+      atomic {
+          ppp_link_up = FALSE;
+      }
   }
 
   event error_t PppIpv6.receive (const uint8_t* message,
@@ -164,7 +168,8 @@ implementation
     call RadioState.turnOn();
   }
 
-  tasklet_async event void RadioState.done() {}
+  tasklet_async event void RadioState.done() {
+  }
 
   /*
   event void RadioSplitControl.startDone(error_t error) {}
@@ -233,8 +238,8 @@ implementation
 	  msg = pppQueue[pppOut];
       }
 
-      if (call PppIpv6.transmit((uint8_t*)msg+1, //skip length ??
-				((uint8_t*)(msg))[0] //len??
+      if (call PppIpv6.transmit((uint8_t*)msg, //skip to cc2420header or ieee802154header
+				128 // ((uint8_t*)(msg))[0] //figure out length, including 154 header
 				) == SUCCESS) {
 	  atomic {
 	      if (msg == pppQueue[pppOut]) {
@@ -251,10 +256,11 @@ implementation
   }
 
   tasklet_async event bool RadioReceive.header(message_t* msg) {
-    return SUCCESS;
+    return TRUE;
   }
 
   tasklet_async event message_t* RadioReceive.receive(message_t* msg) {
+    if (ppp_link_up == TRUE) {
       atomic {
 	  if (!pppFull) {
 	      pppQueue[pppIn] = msg;
@@ -265,11 +271,18 @@ implementation
 		  pppFull = TRUE;
 
 	      if (!pppBusy) {
+		  call Leds.led1Toggle();
 		  post ppptransmit();
 		  pppBusy = TRUE;
+	      } else {
+		  call Leds.led2Toggle();
 	      }
+	  } else {
+	      post ppptransmit();
+	      call Leds.led0Toggle();
 	  }
       }
+    }
     return msg;
   }
 }
